@@ -1,0 +1,45 @@
+"""Environment-based configuration for the PriveX client."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+
+from dotenv import load_dotenv
+
+
+@dataclass(frozen=True)
+class PrivexConfig:
+    base_url: str
+    api_key: str
+    subaccount_id: str | None
+    timeout: float
+
+
+def load_config() -> PrivexConfig:
+    """Load configuration from environment and .env file."""
+    load_dotenv()
+
+    base_url = os.getenv("PRIVEX_BASE_URL", "https://tradingapi.prvx.io").strip().rstrip("/")
+    api_key = os.getenv("PRIVEX_API_KEY", "").strip()
+    subaccount_id = os.getenv("PRIVEX_SUBACCOUNT_ID", "").strip() or None
+    timeout_raw = os.getenv("PRIVEX_TIMEOUT", "15").strip()
+
+    if not api_key:
+        raise ValueError(
+            "Missing PRIVEX_API_KEY. Add it to your .env file and try again."
+        )
+
+    try:
+        timeout = float(timeout_raw)
+    except ValueError as exc:
+        raise ValueError(
+            f"Invalid PRIVEX_TIMEOUT value '{timeout_raw}'. Use a number like 15."
+        ) from exc
+
+    return PrivexConfig(
+        base_url=base_url,
+        api_key=api_key,
+        subaccount_id=subaccount_id,
+        timeout=timeout,
+    )

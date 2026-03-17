@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "privex-starter"
+version = "0.1.0"
+description = "Minimal PriveX Trading API starter client and CLI"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "requests",
+  "python-dotenv",
+]
+
+[project.scripts]
+privex = "privex.cli:main"
+
+[tool.setuptools]
+packages = ["privex"]
