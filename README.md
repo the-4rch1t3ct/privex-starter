@@ -7,7 +7,7 @@ This repo gives you a minimal Python client and CLI with one goal: prove authent
 ## Quickstart
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/the-4rch1t3ct/privex-starter
 cd privex-starter
 pip install -r requirements.txt
 privex init
