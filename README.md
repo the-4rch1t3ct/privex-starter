@@ -9,27 +9,19 @@ This repo gives you a minimal Python client and CLI with one goal: prove authent
 ```bash
 git clone https://github.com/the-4rch1t3ct/privex-starter
 cd privex-starter
-pip install -r requirements.txt
-privex init
-privex connect
-```
-
-`privex init` prompts for your API key, **network (Base or COTI)**, and optional subaccount address, writes `.env`, and can run the connection test when you pass `--connect`.
-
-Alternative install:
-
-```bash
-pip install -e .
-```
-
-Makefile flow (API key in onboarding):
-
-```bash
 make setup
 make init
 ```
 
-`make init` runs `privex init --connect`: prompts for API key, network (Base/COTI), and optional subaccount, writes `.env`, then runs the connection test. No manual `.env` editing.
+`make setup` creates a virtual environment and installs dependencies (avoids system Python / externally-managed-environment). `make init` runs the onboarding: prompts for API key, **network (Base or COTI)**, and optional subaccount, writes `.env`, then runs the connection test.
+
+Without Make (use a venv so `pip` and `privex` work on most Linux/macOS):
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/privex init --connect
+```
 
 ## Expected Output
 
