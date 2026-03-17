@@ -3,11 +3,14 @@ VENV ?= .venv
 PIP := $(VENV)/bin/pip
 PRIVEX := $(VENV)/bin/privex
 
-.PHONY: setup connect
+.PHONY: setup init connect
 
 setup:
 	$(PYTHON) -m venv $(VENV)
 	$(PIP) install -r requirements.txt
+
+init:
+	$(PRIVEX) init --connect
 
 connect:
 	$(PRIVEX) connect

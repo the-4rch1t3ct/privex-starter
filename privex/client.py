@@ -121,11 +121,19 @@ class PrivexClient:
                 "API key is valid but has no delegated subaccounts. Grant permissions first."
             )
 
+        # Restrict to the configured network (chain)
+        chain_matches = [s for s in subaccounts if s.get("chainId") == self.config.chain_id]
+        if not chain_matches:
+            raise PrivexAuthError(
+                f"No subaccount on this network (chain_id={self.config.chain_id}). "
+                "Check PRIVEX_NETWORK or delegate access for Base/COTI."
+            )
+
         wanted = self.config.subaccount_id
         if wanted:
             matches = [
                 item
-                for item in subaccounts
+                for item in chain_matches
                 if str(item.get("subaccountAddress", "")).lower() == wanted.lower()
             ]
             if not matches:
@@ -134,10 +142,10 @@ class PrivexClient:
                     "Check subaccount address and permissions."
                 )
             selected = matches[0]
-        elif len(subaccounts) == 1:
-            selected = subaccounts[0]
+        elif len(chain_matches) == 1:
+            selected = chain_matches[0]
         else:
-            choices = ", ".join(str(item.get("subaccountAddress")) for item in subaccounts)
+            choices = ", ".join(str(s.get("subaccountAddress")) for s in chain_matches)
             raise PrivexError(
                 "Multiple subaccounts available. Set PRIVEX_SUBACCOUNT_ID in .env. "
                 f"Available: {choices}"

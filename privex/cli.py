@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+from getpass import getpass
 from typing import Any
 
 from .client import PrivexAuthError, PrivexClient, PrivexError
+from .config import SUPPORTED_NETWORKS
 
 
 def _extract_portfolio_value(portfolio: dict[str, Any]) -> str:
@@ -73,6 +76,103 @@ def cmd_quickstart(_: argparse.Namespace) -> int:
     return cmd_connect(_)
 
 
+def _write_env(env_path: str, lines: list[tuple[str, str]]) -> None:
+    """Write .env from list of (key, value)."""
+    with open(env_path, "w") as f:
+        for k, v in lines:
+            f.write(f"{k}={v}\n")
+
+
+def _read_env(env_path: str) -> list[tuple[str, str]]:
+    """Read .env into list of (key, value), preserving order."""
+    if not os.path.exists(env_path):
+        return []
+    lines: list[tuple[str, str]] = []
+    with open(env_path) as f:
+        for line in f:
+            line = line.rstrip("\n")
+            if not line.strip() or line.strip().startswith("#"):
+                continue
+            if "=" in line:
+                k, _, v = line.partition("=")
+                lines.append((k.strip(), v.strip()))
+    return lines
+
+
+def _set_env_var(env_path: str, key: str, value: str) -> None:
+    """Update or add key=value in .env; preserve other vars."""
+    pairs = _read_env(env_path)
+    seen = {p[0] for p in pairs}
+    new_pairs = [(k, v) for k, v in pairs if k != key]
+    new_pairs.append((key, value))
+    _write_env(env_path, new_pairs)
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    """Prompt for API key, network, optional subaccount, write .env, optionally run connect."""
+    env_path = os.path.join(os.getcwd(), ".env")
+    if os.path.exists(env_path) and not args.force:
+        print(f".env already exists at {env_path}. Use --force to overwrite.", file=sys.stderr)
+        return 1
+
+    print("PriveX API setup")
+    print("Get your API key from the PriveX platform and delegate subaccount access.")
+    api_key = (args.api_key or getpass("API key: ")).strip()
+    if not api_key:
+        print("❌ API key is required.", file=sys.stderr)
+        return 1
+
+    network = (args.network or input(f"Network ({'/'.join(SUPPORTED_NETWORKS)}) [base]: ").strip()).lower()
+    if not network:
+        network = "base"
+    if network not in SUPPORTED_NETWORKS:
+        print(f"❌ Invalid network. Use one of: {', '.join(SUPPORTED_NETWORKS)}", file=sys.stderr)
+        return 1
+
+    subaccount = (args.subaccount or input("Subaccount address (optional, Enter to skip): ").strip()) or ""
+    base_url = args.base_url or "https://tradingapi.prvx.io"
+    timeout = args.timeout or "15"
+
+    lines = [
+        ("PRIVEX_BASE_URL", base_url),
+        ("PRIVEX_API_KEY", api_key),
+        ("PRIVEX_NETWORK", network),
+        ("PRIVEX_SUBACCOUNT_ID", subaccount),
+        ("PRIVEX_TIMEOUT", timeout),
+    ]
+    _write_env(env_path, lines)
+    print(f"✔ Wrote {env_path}")
+
+    if args.connect:
+        print("")
+        return cmd_connect(args)
+    print("Run `privex connect` to verify.")
+    return 0
+
+
+def cmd_network(args: argparse.Namespace) -> int:
+    """Switch network (base/coti) and optionally run connect."""
+    env_path = os.path.join(os.getcwd(), ".env")
+    if not os.path.exists(env_path):
+        print("❌ No .env found. Run `privex init` first.", file=sys.stderr)
+        return 1
+
+    network = args.network.lower()
+    if network not in SUPPORTED_NETWORKS:
+        print(f"❌ Invalid network. Use one of: {', '.join(SUPPORTED_NETWORKS)}", file=sys.stderr)
+        return 1
+
+    _set_env_var(env_path, "PRIVEX_NETWORK", network)
+    print(f"✔ Network set to {network}")
+
+    if args.connect:
+        # Force client to reload config and clear subaccount cache by new process / new client
+        print("")
+        return cmd_connect(args)
+    print("Run `privex connect` to verify.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="privex", description="PriveX Trading API starter CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -105,6 +205,63 @@ def build_parser() -> argparse.ArgumentParser:
         "quickstart", help="Check config and run connection test"
     )
     quickstart_parser.set_defaults(func=cmd_quickstart)
+
+    init_parser = subparsers.add_parser(
+        "init", help="Prompt for API key and optional subaccount, write .env"
+    )
+    init_parser.add_argument(
+        "--api-key",
+        default="",
+        help="API key (if not set, prompt interactively)",
+    )
+    init_parser.add_argument(
+        "--subaccount",
+        default="",
+        help="Subaccount address (optional)",
+    )
+    init_parser.add_argument(
+        "--base-url",
+        default="",
+        help="Base URL (default: https://tradingapi.prvx.io)",
+    )
+    init_parser.add_argument(
+        "--network",
+        default="",
+        choices=SUPPORTED_NETWORKS,
+        help="Network: base or coti (default: base)",
+    )
+    init_parser.add_argument(
+        "--timeout",
+        default="",
+        help="Request timeout in seconds (default: 15)",
+    )
+    init_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing .env",
+    )
+    init_parser.add_argument(
+        "--connect",
+        action="store_true",
+        help="Run connection test after writing .env",
+    )
+    init_parser.set_defaults(func=cmd_init)
+
+    network_parser = subparsers.add_parser(
+        "network",
+        help="Switch network (base or coti); use anytime to change",
+    )
+    network_parser.add_argument(
+        "network",
+        choices=SUPPORTED_NETWORKS,
+        help="Network to use",
+    )
+    network_parser.add_argument(
+        "--connect",
+        action="store_true",
+        help="Run connection test after switching",
+    )
+    network_parser.set_defaults(func=cmd_network)
 
     return parser
 

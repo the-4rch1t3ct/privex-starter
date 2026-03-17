@@ -10,10 +10,11 @@ This repo gives you a minimal Python client and CLI with one goal: prove authent
 git clone <your-repo-url>
 cd privex-starter
 pip install -r requirements.txt
-cp .env.example .env
-# edit .env with your real values
+privex init
 privex connect
 ```
+
+`privex init` prompts for your API key, **network (Base or COTI)**, and optional subaccount address, writes `.env`, and can run the connection test when you pass `--connect`.
 
 Alternative install:
 
@@ -21,14 +22,14 @@ Alternative install:
 pip install -e .
 ```
 
-Makefile flow (single command after setup):
+Makefile flow (API key in onboarding):
 
 ```bash
 make setup
-cp .env.example .env
-# edit .env with your real values
-make connect
+make init
 ```
+
+`make init` runs `privex init --connect`: prompts for API key, network (Base/COTI), and optional subaccount, writes `.env`, then runs the connection test. No manual `.env` editing.
 
 ## Expected Output
 
@@ -96,11 +97,24 @@ Set values in `.env`:
 
 - `PRIVEX_BASE_URL` (default: `https://tradingapi.prvx.io`)
 - `PRIVEX_API_KEY` (required)
+- `PRIVEX_NETWORK` (default: `base`) — `base` or `coti`
 - `PRIVEX_SUBACCOUNT_ID` (recommended; required when key has multiple subaccounts)
 - `PRIVEX_TIMEOUT` (default: `15`)
 
+## Networks
+
+You can connect to **Base** or **COTI**. Choose during `privex init`, or switch anytime:
+
+```bash
+privex network base
+privex network coti
+privex network coti --connect
+```
+
 ## Commands
 
+- `privex init` - prompt for API key, network (Base/COTI), and optional subaccount, write `.env` (use `--connect` to test after)
+- `privex network <base|coti>` - switch network; use `--connect` to test after
 - `privex connect` - validates key, fetches portfolio, counts open positions
 - `privex positions` - prints open positions
 - `privex order --market-id 1 --side LONG --quantity 1 --leverage 5` - basic market order example
