@@ -206,3 +206,11 @@ class PrivexClient:
             "/v1/trade/create-position",
             json_body=payload,
         )
+
+
+def get_portfolio_safe(client: PrivexClient) -> dict[str, Any] | None:
+    """Return portfolio or None on auth failure. Useful for agent loops."""
+    try:
+        return client.get_portfolio()
+    except PrivexAuthError:
+        return None

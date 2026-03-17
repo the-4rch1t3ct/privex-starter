@@ -126,6 +126,53 @@ If `privex connect` fails:
 - verify required permissions are granted
 - verify `PRIVEX_SUBACCOUNT_ID` matches delegated `subaccountAddress`
 
+## Embedding in an agent
+
+Single import, env-based config, one client to pass into your strategy loop:
+
+```python
+from privex import PrivexClient
+
+client = PrivexClient()  # loads .env, reuses session
+
+portfolio = client.get_portfolio()
+positions = client.get_positions()
+market = client.get_market("ETH-USD")
+# pass client into your decision logic
+```
+
+Error contract for agent logic:
+
+- **`PrivexAuthError`** — auth or permission failure; trigger re-auth or key rotation.
+- **`PrivexError`** — other failure (network, API, validation); retry or back off.
+
+```python
+from privex import PrivexClient, PrivexError, PrivexAuthError
+
+client = PrivexClient()
+
+try:
+    portfolio = client.get_portfolio()
+except PrivexAuthError:
+    # escalate: re-auth or rotate key
+    ...
+except PrivexError:
+    # transient; retry or pause strategy
+    ...
+```
+
+Optional safe helper (returns `None` on auth failure so the agent can branch without try/except):
+
+```python
+from privex import PrivexClient, get_portfolio_safe
+
+client = PrivexClient()
+data = get_portfolio_safe(client)
+if data is None:
+    # handle unauthorized
+    ...
+```
+
 ## Examples
 
 ```bash
