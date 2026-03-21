@@ -7,7 +7,7 @@ PRIVEX := $(VENV)/bin/privex
 
 setup:
 	$(PYTHON) -m venv $(VENV)
-	$(PIP) install -r requirements.txt
+	$(PIP) install -r requirements-dev.txt
 
 init:
 	$(PRIVEX) init --connect

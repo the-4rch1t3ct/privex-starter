@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from .config import PrivexConfig, load_config
 
@@ -29,7 +31,20 @@ class PrivexClient:
                 "Content-Type": "application/json",
             }
         )
+        # Idempotent methods only (default); POST is not retried to avoid duplicate orders.
+        retry = Retry(
+            total=2,
+            backoff_factor=0.5,
+            status_forcelist=(500, 502, 503, 504),
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
         self._subaccount_cache: dict[str, Any] | None = None
+
+    def reset_cache(self) -> None:
+        """Clear resolved subaccount cache (e.g. after changing .env or network)."""
+        self._subaccount_cache = None
 
     def _request(
         self,
@@ -109,7 +124,10 @@ class PrivexClient:
 
     def _resolve_subaccount(self) -> dict[str, Any]:
         if self._subaccount_cache:
-            return self._subaccount_cache
+            if self._subaccount_cache.get("chainId") != self.config.chain_id:
+                self._subaccount_cache = None
+            else:
+                return self._subaccount_cache
 
         permissions = self.get_api_key_permissions()
         if permissions.get("isValid") is False:
@@ -201,11 +219,60 @@ class PrivexClient:
         return data
 
     def place_order(self, payload: dict[str, Any]) -> Any:
+        validate_create_position_payload(payload)
         return self._request(
             "POST",
             "/v1/trade/create-position",
             json_body=payload,
         )
+
+
+def validate_create_position_payload(payload: dict[str, Any]) -> None:
+    """Lightweight checks before POST /v1/trade/create-position."""
+    required = (
+        "marketId",
+        "subaccountAddress",
+        "chainId",
+        "leverage",
+        "positionType",
+        "orderType",
+        "quantity",
+    )
+    missing = [k for k in required if k not in payload or payload[k] is None]
+    if missing:
+        raise PrivexError(f"Missing or null order fields: {', '.join(missing)}")
+
+    mid = payload["marketId"]
+    if not isinstance(mid, (int, float)) or mid <= 0:
+        raise PrivexError("marketId must be a positive number.")
+
+    if not str(payload.get("subaccountAddress", "")).strip():
+        raise PrivexError("subaccountAddress must be non-empty.")
+
+    cid = payload["chainId"]
+    if not isinstance(cid, (int, float)) or cid <= 0:
+        raise PrivexError("chainId must be a positive number.")
+
+    lev = payload["leverage"]
+    if not isinstance(lev, (int, float)) or lev <= 0:
+        raise PrivexError("leverage must be positive.")
+
+    pt = payload["positionType"]
+    if pt not in ("LONG", "SHORT"):
+        raise PrivexError("positionType must be LONG or SHORT.")
+
+    ot = payload["orderType"]
+    if ot not in ("MARKET", "LIMIT"):
+        raise PrivexError("orderType must be MARKET or LIMIT.")
+
+    qty = payload["quantity"]
+    if not isinstance(qty, (int, float)) or qty <= 0:
+        raise PrivexError("quantity must be positive.")
+
+    if ot == "LIMIT":
+        lp = payload.get("limitPrice")
+        if lp is None or (isinstance(lp, (int, float)) and lp <= 0):
+            raise PrivexError("limitPrice is required and must be positive for LIMIT orders.")
 
 
 def get_portfolio_safe(client: PrivexClient) -> dict[str, Any] | None:

@@ -18,6 +18,11 @@ def _extract_portfolio_value(portfolio: dict[str, Any]) -> str:
         value = portfolio.get(key)
         if value not in (None, ""):
             return str(value)
+    keys = ", ".join(sorted(portfolio.keys()))
+    print(
+        f"⚠ Portfolio value unknown — no known balance field. Response keys: {keys}",
+        file=sys.stderr,
+    )
     return "N/A"
 
 
@@ -33,6 +38,21 @@ def _print_positions(positions: list[dict[str, Any]]) -> None:
         qty = pos.get("quantity", "N/A")
         status = pos.get("status", "N/A")
         print(f"{idx}. {symbol} | {side} | qty={qty} | status={status}")
+
+
+def cmd_status(_: argparse.Namespace) -> int:
+    """Health-style summary for agents and ops."""
+    client = PrivexClient()
+    cfg = client.config
+    sub = client.get_active_subaccount()
+    portfolio = client.get_portfolio()
+    positions = client.get_positions()
+    value = _extract_portfolio_value(portfolio)
+    print(f"Network: {cfg.network} (chain_id={cfg.chain_id})")
+    print(f"Subaccount: {sub.get('subaccountAddress', 'N/A')}")
+    print(f"Portfolio value (raw field): {value}")
+    print(f"Open positions: {len(positions)}")
+    return 0
 
 
 def cmd_connect(_: argparse.Namespace) -> int:
@@ -131,7 +151,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 
     subaccount = (args.subaccount or input("Subaccount address (optional, Enter to skip): ").strip()) or ""
     base_url = args.base_url or "https://tradingapi.prvx.io"
-    timeout = args.timeout or "15"
+    timeout = args.timeout or "8"
 
     lines = [
         ("PRIVEX_BASE_URL", base_url),
@@ -144,7 +164,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     print(f"✔ Wrote {env_path}")
 
     if args.connect:
-        print("")
+        print("Running connection test…", flush=True)
         return cmd_connect(args)
     print("Run `privex connect` to verify.")
     return 0
@@ -166,8 +186,7 @@ def cmd_network(args: argparse.Namespace) -> int:
     print(f"✔ Network set to {network}")
 
     if args.connect:
-        # Force client to reload config and clear subaccount cache by new process / new client
-        print("")
+        print("Running connection test…", flush=True)
         return cmd_connect(args)
     print("Run `privex connect` to verify.")
     return 0
@@ -179,6 +198,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     connect_parser = subparsers.add_parser("connect", help="Validate and fetch portfolio + positions")
     connect_parser.set_defaults(func=cmd_connect)
+
+    status_parser = subparsers.add_parser(
+        "status",
+        help="Print network, subaccount, portfolio summary, position count",
+    )
+    status_parser.set_defaults(func=cmd_status)
 
     positions_parser = subparsers.add_parser("positions", help="List open positions")
     positions_parser.set_defaults(func=cmd_positions)
@@ -233,7 +258,7 @@ def build_parser() -> argparse.ArgumentParser:
     init_parser.add_argument(
         "--timeout",
         default="",
-        help="Request timeout in seconds (default: 15)",
+        help="Request timeout in seconds (default: 8)",
     )
     init_parser.add_argument(
         "--force",

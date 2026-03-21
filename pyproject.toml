@@ -9,8 +9,8 @@ description = "Minimal PriveX Trading API starter client and CLI"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-  "requests",
-  "python-dotenv",
+  "requests>=2.31,<3",
+  "python-dotenv>=1.0,<2",
 ]
 
 [project.scripts]

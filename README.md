@@ -15,13 +15,15 @@ make init
 
 `make setup` creates a virtual environment and installs dependencies (avoids system Python / externally-managed-environment). `make init` runs the onboarding: prompts for API key, **network (Base or COTI)**, and optional subaccount, writes `.env`, then runs the connection test.
 
-Without Make (use a venv so `pip` and `privex` work on most Linux/macOS):
+Without Make (venv + editable install so the `privex` CLI is available):
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -r requirements-dev.txt
 .venv/bin/privex init --connect
 ```
+
+Runtime-only deps (no package install): `requirements.txt`. For the CLI and `import privex`, use `requirements-dev.txt` (includes editable `-e .`) or `pip install -e .` after installing `requirements.txt`.
 
 ## Expected Output
 
@@ -85,13 +87,19 @@ Client behavior:
 
 ## Configuration
 
+Copy and edit if you prefer not to use `privex init`:
+
+```bash
+cp .env.example .env
+```
+
 Set values in `.env`:
 
 - `PRIVEX_BASE_URL` (default: `https://tradingapi.prvx.io`)
 - `PRIVEX_API_KEY` (required)
 - `PRIVEX_NETWORK` (default: `base`) — `base` or `coti`
 - `PRIVEX_SUBACCOUNT_ID` (recommended; required when key has multiple subaccounts)
-- `PRIVEX_TIMEOUT` (default: `15`)
+- `PRIVEX_TIMEOUT` (default: `8` seconds) — lower for tight agent loops; raise for slow networks. The HTTP session retries transient 5xx on idempotent requests (e.g. GET) twice with backoff; POST is not retried.
 
 ## Networks
 
@@ -108,6 +116,7 @@ privex network coti --connect
 - `privex init` - prompt for API key, network (Base/COTI), and optional subaccount, write `.env` (use `--connect` to test after)
 - `privex network <base|coti>` - switch network; use `--connect` to test after
 - `privex connect` - validates key, fetches portfolio, counts open positions
+- `privex status` - network, subaccount, portfolio summary, open position count (good for health checks)
 - `privex positions` - prints open positions
 - `privex order --market-id 1 --side LONG --quantity 1 --leverage 5` - basic market order example
 - `privex quickstart` - same as `connect`, useful as a first-run command
@@ -172,6 +181,10 @@ if data is None:
     # handle unauthorized
     ...
 ```
+
+`place_order` validates payloads with `validate_create_position_payload` before calling the API. After changing `.env` at runtime, use a new `PrivexClient(load_config())` or call `client.reset_cache()` if you reload config on the same instance.
+
+Concurrent / async strategies: this package uses synchronous `requests`. For async, use `httpx` or similar with the same URLs, headers (`x-api-key`), and request bodies.
 
 ## Examples
 

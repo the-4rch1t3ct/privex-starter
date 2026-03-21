@@ -31,7 +31,7 @@ def load_config() -> PrivexConfig:
     base_url = os.getenv("PRIVEX_BASE_URL", "https://tradingapi.prvx.io").strip().rstrip("/")
     api_key = os.getenv("PRIVEX_API_KEY", "").strip()
     subaccount_id = os.getenv("PRIVEX_SUBACCOUNT_ID", "").strip() or None
-    timeout_raw = os.getenv("PRIVEX_TIMEOUT", "15").strip()
+    timeout_raw = os.getenv("PRIVEX_TIMEOUT", "8").strip()
     network_raw = os.getenv("PRIVEX_NETWORK", "base").strip().lower()
     chain_id_raw = os.getenv("PRIVEX_CHAIN_ID", "").strip()
 
@@ -44,7 +44,7 @@ def load_config() -> PrivexConfig:
         timeout = float(timeout_raw)
     except ValueError as exc:
         raise ValueError(
-            f"Invalid PRIVEX_TIMEOUT value '{timeout_raw}'. Use a number like 15."
+            f"Invalid PRIVEX_TIMEOUT value '{timeout_raw}'. Use a number like 8."
         ) from exc
 
     if chain_id_raw:
