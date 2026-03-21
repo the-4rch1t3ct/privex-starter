@@ -4,7 +4,22 @@ Fastest way to connect a self-hosted agent to PriveX.
 
 This repo gives you a minimal Python client and CLI with one goal: prove authenticated connectivity with one command.
 
-## Quickstart
+### One-line install (macOS / Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/the-4rch1t3ct/privex-starter/main/install.sh | bash
+```
+
+Installs to `~/privex-starter` by default, creates a venv, and installs the `privex` CLI. Then run onboarding (add the venv `bin` to `PATH` or use the full path shown by the script):
+
+```bash
+export PATH="$HOME/privex-starter/.venv/bin:$PATH"
+privex init --connect
+```
+
+Custom install directory: `INSTALL_DIR=~/code/privex curl -fsSL … | bash`
+
+## Quickstart (manual)
 
 ```bash
 git clone https://github.com/the-4rch1t3ct/privex-starter
