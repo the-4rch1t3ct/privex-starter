@@ -114,7 +114,22 @@ class PrivexClient:
         return payload
 
     def health(self) -> Any:
-        return self._request("GET", "/", authenticated=False)
+        """GET / may return plain text (not JSON)."""
+        url = f"{self.config.base_url}/"
+        try:
+            response = self.session.get(url, timeout=self.config.timeout)
+        except requests.RequestException as exc:
+            raise PrivexError(
+                "Network error while calling PriveX API. Check connectivity and PRIVEX_BASE_URL."
+            ) from exc
+        if not response.ok:
+            raise PrivexError(f"PriveX API error (HTTP {response.status_code}): {response.text[:500]}")
+        if not response.text:
+            return None
+        try:
+            return response.json()
+        except ValueError:
+            return response.text.strip()
 
     def get_api_key_permissions(self) -> dict[str, Any]:
         data = self._request("POST", "/v1/api-keys/list-permissions")
@@ -214,6 +229,11 @@ class PrivexClient:
             "GET",
             f"/v1/markets/{subaccount['chainId']}/by-symbol/{symbol}",
         )
+        if data is None:
+            raise PrivexError(
+                f"No market for symbol {symbol!r} on chain {subaccount['chainId']}. "
+                "Try venue symbols (e.g. ETHUSDT on COTI, ETH-USD on Base)."
+            )
         if not isinstance(data, dict):
             raise PrivexError("Unexpected market response format from PriveX.")
         return data

@@ -50,8 +50,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="PriveX trading API live smoke test")
     parser.add_argument(
         "--symbol",
-        default=os.getenv("PRIVEX_SMOKE_SYMBOL", "ETH-USD"),
-        help="Market symbol for pricing / market detail (default ETH-USD)",
+        default=os.getenv("PRIVEX_SMOKE_SYMBOL", "ETHUSDT"),
+        help="Market symbol as returned by the venue (e.g. ETHUSDT on COTI, ETH-USD on Base)",
     )
     parser.add_argument(
         "--solver",

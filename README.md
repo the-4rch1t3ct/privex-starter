@@ -215,5 +215,5 @@ Exercises read-only trading-related endpoints (health, account, markets, pricing
 
 ```bash
 python examples/live_trading_smoke.py
-python examples/live_trading_smoke.py --live --i-confirm-risk --symbol ETH-USD --quantity 0.001 --leverage 1
+python examples/live_trading_smoke.py --live --i-confirm-risk --symbol ETHUSDT --quantity 0.001 --leverage 1
 ```
