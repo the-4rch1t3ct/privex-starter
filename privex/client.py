@@ -218,6 +218,136 @@ class PrivexClient:
             raise PrivexError("Unexpected market response format from PriveX.")
         return data
 
+    def get_aggregated_markets(self) -> Any:
+        return self._request(
+            "GET",
+            f"/v1/markets/aggregated/{self.config.chain_id}",
+            authenticated=False,
+        )
+
+    def get_mark_price(self, symbol: str) -> Any:
+        return self._request(
+            "GET",
+            f"/v1/pricing/mark-price/{symbol}",
+            authenticated=False,
+        )
+
+    def get_last_price(self, symbol: str) -> Any:
+        return self._request(
+            "GET",
+            f"/v1/pricing/last-price/{symbol}",
+            authenticated=False,
+        )
+
+    def get_subaccount_details(self) -> dict[str, Any]:
+        subaccount = self._resolve_subaccount()
+        data = self._request(
+            "GET",
+            "/v1/accounts/subaccount/details",
+            params={
+                "subaccountAddress": subaccount["subaccountAddress"],
+                "chainId": subaccount["chainId"],
+            },
+        )
+        if not isinstance(data, dict):
+            raise PrivexError("Unexpected subaccount details response format from PriveX.")
+        return data
+
+    def get_position_open_status(self, position_id: str) -> Any:
+        subaccount = self._resolve_subaccount()
+        return self._request(
+            "GET",
+            "/v1/positions/open-request/status",
+            params={
+                "positionId": position_id,
+                "chainId": subaccount["chainId"],
+            },
+        )
+
+    def get_position_close_status(self, close_request_id: str) -> Any:
+        subaccount = self._resolve_subaccount()
+        return self._request(
+            "GET",
+            "/v1/positions/close-request/status",
+            params={
+                "closeRequestId": close_request_id,
+                "chainId": subaccount["chainId"],
+            },
+        )
+
+    def close_position(self, payload: dict[str, Any]) -> Any:
+        return self._request("POST", "/v1/trade/close-position", json_body=payload)
+
+    def cancel_quote(self, payload: dict[str, Any]) -> Any:
+        return self._request("POST", "/v1/trade/cancel-quote", json_body=payload)
+
+    def cancel_close_request(self, payload: dict[str, Any]) -> Any:
+        return self._request("POST", "/v1/trade/cancel-close-request", json_body=payload)
+
+    def list_tpsl_for_positions(self, quote_ids: list[str]) -> Any:
+        subaccount = self._resolve_subaccount()
+        return self._request(
+            "POST",
+            "/v1/tpsl/list",
+            json_body={"chainId": subaccount["chainId"], "quoteIds": quote_ids},
+        )
+
+    def get_solver_locked_parameters(
+        self,
+        *,
+        solver: str,
+        market_name: str,
+        leverage: float,
+    ) -> Any:
+        return self._request(
+            "GET",
+            "/v1/solvers/locked-parameters",
+            params={
+                "solver": solver,
+                "chainId": self.config.chain_id,
+                "marketName": market_name,
+                "leverage": leverage,
+            },
+            authenticated=False,
+        )
+
+    def get_solver_price_range(
+        self,
+        *,
+        solver: str,
+        market_name: str,
+    ) -> Any:
+        return self._request(
+            "GET",
+            "/v1/solvers/price-range",
+            params={
+                "solver": solver,
+                "chainId": self.config.chain_id,
+                "marketName": market_name,
+            },
+            authenticated=False,
+        )
+
+    def get_solver_open_interest(self, *, solver: str) -> Any:
+        return self._request(
+            "GET",
+            "/v1/solvers/open-interest",
+            params={"solver": solver, "chainId": self.config.chain_id},
+            authenticated=False,
+        )
+
+    def get_solver_notional_cap(self, *, solver: str, market_id: int) -> Any:
+        return self._request(
+            "GET",
+            "/v1/solvers/notional-cap",
+            params={
+                "solver": solver,
+                "chainId": self.config.chain_id,
+                "marketId": market_id,
+            },
+            authenticated=False,
+        )
+
     def place_order(self, payload: dict[str, Any]) -> Any:
         validate_create_position_payload(payload)
         return self._request(

@@ -208,3 +208,12 @@ python examples/connect.py
 python examples/get_positions.py
 python examples/place_order.py --market-id 1 --side LONG --quantity 1 --leverage 5
 ```
+
+### Live trading API smoke test
+
+Exercises read-only trading-related endpoints (health, account, markets, pricing, solvers, positions, TP/SL list). Optional **`--live`** opens a small real MARKET position and closes it — **only with `--i-confirm-risk`**.
+
+```bash
+python examples/live_trading_smoke.py
+python examples/live_trading_smoke.py --live --i-confirm-risk --symbol ETH-USD --quantity 0.001 --leverage 1
+```
